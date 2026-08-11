@@ -16,3 +16,12 @@ dependencies = [
     "sqlmodel>=0.0.39",
     "uvicorn>=0.52.1",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]
+
+[tool.coverage.run]
+omit = ["test_app.py", "conftest.py"]
+

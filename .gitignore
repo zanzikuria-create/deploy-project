@@ -12,3 +12,6 @@ wheels/
 # Database
 app.db
 test.db
+
+# Environment variables
+.env

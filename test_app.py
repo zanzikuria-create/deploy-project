@@ -12,11 +12,10 @@ def test_read_root():
     assert response.status_code == 200
     assert response.json() == {"message": "Hello World"}
 
-
-def test_health_check():
+def test_health_check(session):
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "healthy", "database": "connected"}
 
 
 def test_route_not_found():

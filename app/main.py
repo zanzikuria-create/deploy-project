@@ -1,11 +1,16 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, Session, select
+from sqlalchemy import text
 
 from app.database import engine, get_session, create_db_and_tables
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class Product(SQLModel, table=True):
@@ -24,6 +29,7 @@ class User(SQLModel, table=True):
 class UserUpdate(SQLModel):
     name: Optional[str] = None
     email: Optional[str] = None
+
 
 class UserCreate(SQLModel):
     name: str
@@ -53,15 +59,22 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
-    return {"status": "ok"}
+async def health_check(session: Session = Depends(get_session)):
+    try:
+        session.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {"status": "unhealthy", "database": "error"}
 
 
 @app.post("/products", status_code=201)
 def create_product(product: Product, session: Session = Depends(get_session)):
+    logger.info(f"Creating product: {product.name}")
     session.add(product)
     session.commit()
     session.refresh(product)
+    logger.info(f"Product created with id={product.id}")
     return product
 
 
@@ -101,6 +114,7 @@ async def upload_file(file: UploadFile = File(...)):
 
 @app.get("/weather/{city}")
 async def get_weather(city: str):
+    logger.info(f"Fetching weather for city: {city}")
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -109,6 +123,7 @@ async def get_weather(city: str):
                 timeout=5.0,
             )
     except httpx.TimeoutException:
+        logger.error(f"Weather service timed out for city: {city}")
         raise HTTPException(status_code=503, detail="Weather service timed out")
 
     data = response.json()
@@ -120,14 +135,17 @@ async def get_weather(city: str):
 
 @app.post("/users", status_code=201)
 def create_user(user: UserCreate, session: Session = Depends(get_session)):
+    logger.info(f"Creating user with email: {user.email}")
     existing = session.exec(select(User).where(User.email == user.email)).first()
     if existing:
+        logger.warning(f"Duplicate email attempted: {user.email}")
         raise HTTPException(status_code=400, detail="Email already registered")
 
     db_user = User(name=user.name, email=user.email)
     session.add(db_user)
     session.commit()
     session.refresh(db_user)
+    logger.info(f"User created with id={db_user.id}")
     return db_user
 
 

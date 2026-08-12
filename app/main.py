@@ -315,6 +315,8 @@ async def portfolio():
 <!-- LESSON 8 -->
 
 <div class="assignment">
+<a href="https://github.com/zanzikuria-create/clinicguard-api"
+                   target="_blank">
     <span class="badge">Lesson 8</span>
 
     <span>Authorization & Rate Limiting</span>
